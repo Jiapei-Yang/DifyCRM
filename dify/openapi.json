@@ -1,0 +1,96 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DifyCRM API",
+    "version": "1.0.0",
+    "description": "Unified business API for Feishu + LangBot + Dify CRM assistant."
+  },
+  "servers": [
+    {
+      "url": "http://host.docker.internal:5055",
+      "description": "Dify Docker access on Windows"
+    },
+    {
+      "url": "http://127.0.0.1:5055",
+      "description": "Local host access"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service status"
+          }
+        }
+      }
+    },
+    "/assistant/command": {
+      "post": {
+        "summary": "Run one CRM assistant command",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "example": "/线索创建 名称:周总 公司:星河科技 来源:官网表单 意向:高 预算:20万 痛点:线索分散且销售跟进不及时"
+                  },
+                  "sender_id": {
+                    "type": "string",
+                    "example": "demo_sales"
+                  },
+                  "conversation_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command result"
+          }
+        }
+      }
+    },
+    "/stats/acquisition": {
+      "get": {
+        "summary": "Acquisition channel analysis",
+        "responses": {
+          "200": {
+            "description": "Acquisition stats"
+          }
+        }
+      }
+    },
+    "/stats/source": {
+      "get": {
+        "summary": "Lead source analysis",
+        "responses": {
+          "200": {
+            "description": "Source stats"
+          }
+        }
+      }
+    },
+    "/stats/funnel": {
+      "get": {
+        "summary": "Lead and opportunity funnel",
+        "responses": {
+          "200": {
+            "description": "Funnel stats"
+          }
+        }
+      }
+    }
+  }
+}
