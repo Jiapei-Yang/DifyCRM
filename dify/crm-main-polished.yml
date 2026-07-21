@@ -1,0 +1,837 @@
+app:
+  description: '飞书智能 CRM 助手（回复润色版）：调用 DifyCRM API 后，由大模型将结构化结果改写为适合销售人员阅读的飞书回复。'
+  icon: 🤖
+  icon_background: '#E0F2FE'
+  mode: workflow
+  name: crm_main_polished
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods:
+      - local_file
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: '可直接用自然语言，例如：「帮我看看各渠道获客效果」「列出高分线索」「录入线索：周总，云启科技，官网表单，高意向，预算20万，销售跟进不及时」。仍支持 /help、/获客分析 等指令。'
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 帮我看看各渠道获客效果
+    - 列出当前线索并按评分排序
+    - 录入一条高意向线索：周总，云启科技，来自官网，预算20万
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: code
+      id: edge_start_merge
+      source: start_001
+      sourceHandle: source
+      target: code_merge_009
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: edge_merge_llm
+      source: code_merge_009
+      sourceHandle: source
+      target: llm_nl_010
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: edge_llm_clean
+      source: llm_nl_010
+      sourceHandle: source
+      target: code_clean_011
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: edge_clean_input
+      source: code_clean_011
+      sourceHandle: source
+      target: code_input_002
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: edge_input_classify
+      source: code_input_002
+      sourceHandle: source
+      target: code_classify_003
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: edge_classify_prepare
+      source: code_classify_003
+      sourceHandle: source
+      target: code_prepare_004
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: edge_prepare_http
+      source: code_prepare_004
+      sourceHandle: source
+      target: http_crm_005
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: edge_http_parse
+      source: http_crm_005
+      sourceHandle: source
+      target: code_parse_006
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: edge_parse_polish
+      source: code_parse_006
+      sourceHandle: source
+      target: llm_polish_012
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: edge_polish_format
+      source: llm_polish_012
+      sourceHandle: source
+      target: code_format_007
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: edge_format_end
+      source: code_format_007
+      sourceHandle: source
+      target: end_008
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: 'Dify 调试填 user_message_text；LangBot/飞书自动注入 langbot_user_message_text。支持自然语言，也兼容 /指令。'
+        selected: false
+        title: 开始
+        type: start
+        variables:
+        - label: 用户消息（Dify 调试）
+          max_length: 10000
+          options: []
+          required: false
+          type: paragraph
+          variable: user_message_text
+        - label: 飞书/LangBot 用户消息
+          max_length: 10000
+          options: []
+          required: false
+          type: paragraph
+          variable: langbot_user_message_text
+        - label: 发送人 ID
+          max_length: 200
+          options: []
+          required: false
+          type: text-input
+          variable: sender_id
+          default: demo_sales
+        - label: 会话 ID
+          max_length: 200
+          options: []
+          required: false
+          type: text-input
+          variable: conversation_id
+      height: 168
+      id: start_001
+      position:
+        x: 30
+        y: 280
+      positionAbsolute:
+        x: 30
+        y: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(user_message_text: str, langbot_user_message_text: str, sender_id: str, conversation_id: str) -> dict:\n    def norm(value):\n        if value is None:\n            return \"\"\n        if isinstance(value, list):\n            return \"\\n\".join(str(x).strip() for x in value if str(x).strip())\n        return str(value).strip()\n\n    raw = norm(langbot_user_message_text) or norm(user_message_text) or \"\"\n    raw = raw.replace(\"\\r\", \"\\n\").strip()\n    return {\n        \"raw_message\": raw,\n        \"sender\": norm(sender_id) or \"demo_sales\",\n        \"conversation\": norm(conversation_id),\n        \"source\": \"langbot\" if norm(langbot_user_message_text) else \"dify_debug\",\n    }\n"
+        code_language: python3
+        desc: 合并飞书/LangBot 与 Dify 调试输入，供自然语言解析使用。
+        outputs:
+          conversation:
+            children: null
+            type: string
+          raw_message:
+            children: null
+            type: string
+          sender:
+            children: null
+            type: string
+          source:
+            children: null
+            type: string
+        selected: false
+        title: 合并原始输入
+        type: code
+        variables:
+        - value_selector:
+          - start_001
+          - user_message_text
+          value_type: string
+          variable: user_message_text
+        - value_selector:
+          - start_001
+          - langbot_user_message_text
+          value_type: string
+          variable: langbot_user_message_text
+        - value_selector:
+          - start_001
+          - sender_id
+          value_type: string
+          variable: sender_id
+        - value_selector:
+          - start_001
+          - conversation_id
+          value_type: string
+          variable: conversation_id
+      height: 54
+      id: code_merge_009
+      position:
+        x: 280
+        y: 300
+      positionAbsolute:
+        x: 280
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 将自然语言解析为一条 CRM 斜杠指令；若用户已是 /指令 则原样输出。
+        model:
+          completion_params:
+            max_tokens: 1024
+            temperature: 0.1
+            response_format: text
+          mode: chat
+          name: deepseek-chat
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys-nl-crm
+          role: system
+          text: "你是 DifyCRM 指令解析器。把用户自然语言转成**一条** CRM 斜杠指令。\n\n规则：\n1. 只输出一行指令，不要解释、不要 Markdown、不要代码块。\n2. 若用户消息本身已是 / 开头的合法指令，原样输出（可整理空格）。\n3. 无法识别时输出：/help\n4. 参数格式：/指令名 名称:值 公司:值 …\n\n可用指令：\n- /help /面板\n- /渠道创建 名称: 类型: 成本: 备注:\n- /活动创建 名称: 渠道: 预算: 目标:\n- /线索创建 名称: 公司: 电话: 来源: 意向: 预算: 痛点:\n- /线索列表 /我的线索\n- /线索评分 {id}\n- /线索转客户 {id}\n- /来源分析 /获客分析 /渠道分析\n- /客户创建 名称: 电话: 来源:\n- /我的客户\n- /跟进 客户: 内容:\n- /漏斗\n\n示例：\n用户：帮我看看各渠道获客效果 → /获客分析\n用户：列出线索 → /线索列表\n用户：录入线索周总，云启科技，官网，高意向，20万，跟进不及时 → /线索创建 名称:周总 公司:云启科技 来源:官网表单 意向:高 预算:20万 痛点:销售跟进不及时\n"
+        - id: usr-nl-crm
+          role: user
+          text: '{{#code_merge_009.raw_message#}}'
+        reasoning_format: separated
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+        selected: false
+        structured_output:
+          enabled: false
+        title: 自然语言转指令
+        type: llm
+        variables: []
+        vision:
+          configs:
+            variable_selector: []
+          enabled: false
+        memory:
+          enabled: false
+          window:
+            enabled: false
+            size: 50
+      height: 90
+      id: llm_nl_010
+      position:
+        x: 530
+        y: 282
+      positionAbsolute:
+        x: 530
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(llm_text: str, raw_message: str) -> dict:\n    import re\n\n    raw = (raw_message or \"\").strip()\n    if raw.startswith(\"/\"):\n        cmd = \" \".join(raw.split())\n        return {\"parsed_command\": cmd, \"parse_mode\": \"direct\"}\n\n    text = (llm_text or \"\").strip()\n    if \"```\" in text:\n        m = re.search(r\"```(?:\\w*\\n)?(.*?)```\", text, re.S)\n        if m:\n            text = m.group(1).strip()\n\n    for line in text.splitlines():\n        line = line.strip()\n        if line.startswith(\"/\"):\n            return {\"parsed_command\": \" \".join(line.split()), \"parse_mode\": \"llm\"}\n\n    text = \" \".join(text.split())\n    if text.startswith(\"/\"):\n        return {\"parsed_command\": text, \"parse_mode\": \"llm\"}\n\n    return {\"parsed_command\": \"/help\", \"parse_mode\": \"fallback\"}\n"
+        code_language: python3
+        desc: 从 LLM 输出提取单行 /指令；已是斜杠指令则跳过 LLM 结果。
+        outputs:
+          parse_mode:
+            children: null
+            type: string
+          parsed_command:
+            children: null
+            type: string
+        selected: false
+        title: 提取 CRM 指令
+        type: code
+        variables:
+        - value_selector:
+          - llm_nl_010
+          - text
+          value_type: string
+          variable: llm_text
+        - value_selector:
+          - code_merge_009
+          - raw_message
+          value_type: string
+          variable: raw_message
+      height: 54
+      id: code_clean_011
+      position:
+        x: 780
+        y: 300
+      positionAbsolute:
+        x: 780
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(parsed_command: str, parse_mode: str, sender: str, conversation: str, source: str, raw_message: str) -> dict:\n    message = \" \".join((parsed_command or \"/help\").replace(\"\\r\", \"\\n\").split())\n    return {\n        \"normalized_message\": message,\n        \"sender\": sender or \"demo_sales\",\n        \"conversation\": conversation or \"\",\n        \"source\": source or \"unknown\",\n        \"raw_message\": raw_message or \"\",\n        \"parse_mode\": parse_mode or \"\",\n    }\n"
+        code_language: python3
+        desc: 标准化解析后的指令及会话上下文。
+        outputs:
+          conversation:
+            children: null
+            type: string
+          normalized_message:
+            children: null
+            type: string
+          parse_mode:
+            children: null
+            type: string
+          raw_message:
+            children: null
+            type: string
+          sender:
+            children: null
+            type: string
+          source:
+            children: null
+            type: string
+        selected: false
+        title: 输入标准化
+        type: code
+        variables:
+        - value_selector:
+          - code_clean_011
+          - parsed_command
+          value_type: string
+          variable: parsed_command
+        - value_selector:
+          - code_clean_011
+          - parse_mode
+          value_type: string
+          variable: parse_mode
+        - value_selector:
+          - code_merge_009
+          - sender
+          value_type: string
+          variable: sender
+        - value_selector:
+          - code_merge_009
+          - conversation
+          value_type: string
+          variable: conversation
+        - value_selector:
+          - code_merge_009
+          - source
+          value_type: string
+          variable: source
+        - value_selector:
+          - code_merge_009
+          - raw_message
+          value_type: string
+          variable: raw_message
+      height: 54
+      id: code_input_002
+      position:
+        x: 1030
+        y: 310
+      positionAbsolute:
+        x: 1030
+        y: 310
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(normalized_message: str) -> dict:\n    text = (normalized_message or \"\").strip()\n    command = text[1:].split(maxsplit=1)[0] if text.startswith(\"/\") else \"自然语言\"\n    acquisition = {\"渠道创建\", \"活动创建\", \"营销活动创建\", \"线索创建\", \"线索列表\", \"我的线索\", \"线索评分\", \"线索转客户\", \"来源分析\", \"获客分析\", \"渠道分析\"}\n    sales = {\"客户创建\", \"我的客户\", \"跟进\", \"跟进总结\", \"漏斗\", \"面板\"}\n    risky = {\"线索转客户\"}\n    if command in acquisition:\n        category = \"获客营销\"\n    elif command in sales:\n        category = \"销售跟进\"\n    elif command in {\"help\", \"帮助\"}:\n        category = \"帮助\"\n    else:\n        category = \"通用入口\"\n    return {\n        \"command\": command,\n        \"category\": category,\n        \"risk_level\": \"medium\" if command in risky else \"low\",\n        \"route_note\": f\"{category} / {command}\",\n    }\n"
+        code_language: python3
+        desc: 轻量预分类，便于画布展示业务路由。
+        outputs:
+          category:
+            children: null
+            type: string
+          command:
+            children: null
+            type: string
+          risk_level:
+            children: null
+            type: string
+          route_note:
+            children: null
+            type: string
+        selected: false
+        title: 指令预分类
+        type: code
+        variables:
+        - value_selector:
+          - code_input_002
+          - normalized_message
+          value_type: string
+          variable: normalized_message
+      height: 54
+      id: code_classify_003
+      position:
+        x: 1320
+        y: 310
+      positionAbsolute:
+        x: 1320
+        y: 310
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(normalized_message: str, sender: str, conversation: str, source: str, category: str, command: str, risk_level: str, raw_message: str, parse_mode: str) -> dict:\n    import json\n\n    payload = {\n        \"message\": normalized_message or \"/help\",\n        \"sender_id\": sender or \"demo_sales\",\n        \"metadata\": {\n            \"source\": source,\n            \"category\": category,\n            \"command\": command,\n            \"risk_level\": risk_level,\n            \"parse_mode\": parse_mode,\n            \"raw_message\": raw_message,\n        },\n    }\n    if conversation:\n        payload[\"conversation_id\"] = conversation\n    return {\n        \"body_json\": json.dumps(payload, ensure_ascii=False),\n        \"request_preview\": f\"{category} -> {command}\",\n    }\n"
+        code_language: python3
+        desc: 组装 CRM API 请求。
+        outputs:
+          body_json:
+            children: null
+            type: string
+          request_preview:
+            children: null
+            type: string
+        selected: false
+        title: 组装 API 请求
+        type: code
+        variables:
+        - value_selector:
+          - code_input_002
+          - normalized_message
+          value_type: string
+          variable: normalized_message
+        - value_selector:
+          - code_input_002
+          - sender
+          value_type: string
+          variable: sender
+        - value_selector:
+          - code_input_002
+          - conversation
+          value_type: string
+          variable: conversation
+        - value_selector:
+          - code_input_002
+          - source
+          value_type: string
+          variable: source
+        - value_selector:
+          - code_input_002
+          - raw_message
+          value_type: string
+          variable: raw_message
+        - value_selector:
+          - code_input_002
+          - parse_mode
+          value_type: string
+          variable: parse_mode
+        - value_selector:
+          - code_classify_003
+          - category
+          value_type: string
+          variable: category
+        - value_selector:
+          - code_classify_003
+          - command
+          value_type: string
+          variable: command
+        - value_selector:
+          - code_classify_003
+          - risk_level
+          value_type: string
+          variable: risk_level
+      height: 54
+      id: code_prepare_004
+      position:
+        x: 1610
+        y: 310
+      positionAbsolute:
+        x: 1610
+        y: 310
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: '{{#code_prepare_004.body_json#}}'
+          type: raw-text
+        desc: Dify Docker 内访问宿主机 FastAPI，业务写入 MySQL dify_crm。
+        headers: 'Content-Type: application/json; charset=utf-8'
+        method: post
+        params: ''
+        retry_config:
+          enabled: true
+          max_retries: 1
+          retry_interval: 1000
+        selected: false
+        ssl_verify: true
+        timeout:
+          connect: 10
+          read: 30
+          write: 30
+        title: 调用 DifyCRM API
+        type: http-request
+        url: http://host.docker.internal:5055/assistant/command
+        variables: []
+      height: 90
+      id: http_crm_005
+      position:
+        x: 1900
+        y: 292
+      positionAbsolute:
+        x: 1900
+        y: 292
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(http_body: str, status_code: int, normalized_message: str, category: str, raw_message: str, parse_mode: str) -> dict:\n    import json\n\n    try:\n        body = http_body\n        if isinstance(body, (dict, list)):\n            data = body\n        else:\n            data = json.loads(str(body or \"{}\"))\n        raw_reply = data.get(\"reply\") or \"CRM 服务没有返回 reply。\"\n        ok = bool(data.get(\"ok\"))\n        intent = str(data.get(\"intent\") or \"unknown\")\n    except Exception as exc:\n        ok = False\n        intent = \"parse_error\"\n        raw_reply = f\"CRM 返回解析失败：{exc}；HTTP 状态：{status_code}\"\n\n    if not ok and not raw_reply.startswith(\"CRM 返回解析失败\"):\n        raw_reply = f\"CRM 指令处理失败：{raw_reply}\"\n    return {\n        \"raw_reply\": raw_reply,\n        \"intent\": intent,\n        \"ok_text\": \"true\" if ok else \"false\",\n        \"category\": category,\n        \"parsed_command\": normalized_message,\n        \"raw_message\": raw_message,\n        \"parse_mode\": parse_mode,\n    }\n"
+        code_language: python3
+        desc: 解析 CRM API 响应。
+        outputs:
+          category:
+            children: null
+            type: string
+          intent:
+            children: null
+            type: string
+          ok_text:
+            children: null
+            type: string
+          parse_mode:
+            children: null
+            type: string
+          parsed_command:
+            children: null
+            type: string
+          raw_message:
+            children: null
+            type: string
+          raw_reply:
+            children: null
+            type: string
+        selected: false
+        title: 解析 CRM 响应
+        type: code
+        variables:
+        - value_selector:
+          - http_crm_005
+          - body
+          value_type: string
+          variable: http_body
+        - value_selector:
+          - http_crm_005
+          - status_code
+          value_type: number
+          variable: status_code
+        - value_selector:
+          - code_input_002
+          - normalized_message
+          value_type: string
+          variable: normalized_message
+        - value_selector:
+          - code_input_002
+          - raw_message
+          value_type: string
+          variable: raw_message
+        - value_selector:
+          - code_input_002
+          - parse_mode
+          value_type: string
+          variable: parse_mode
+        - value_selector:
+          - code_classify_003
+          - category
+          value_type: string
+          variable: category
+      height: 54
+      id: code_parse_006
+      position:
+        x: 2190
+        y: 310
+      positionAbsolute:
+        x: 2190
+        y: 310
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 在不改变事实与数字的前提下，将 API 结果润色为自然、清晰、适合销售人员阅读的飞书回复。
+        model:
+          completion_params:
+            max_tokens: 1400
+            temperature: 0.35
+            response_format: text
+          mode: chat
+          name: deepseek-chat
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys-polish-crm
+          role: system
+          text: "你是面向一线销售人员的 CRM 助手，负责把系统返回的公式化内容改写成适合飞书聊天的业务回复。\n\n目标：信息有结构、口吻自然利落、方便销售马上理解和行动，但不要像固定模板或客服话术。\n\n硬性规则：\n1. 只依据“CRM 原始结果”改写，必须完整保留其中的事实、数字、名称、状态、ID、时间和错误信息；严禁补充、猜测或编造。\n2. 不改变业务结论，不承诺系统未执行的动作。执行失败时要直接说明失败原因，不得润色成成功。\n3. 回复通常控制在 2—8 行；简单结果用自然短句，多个条目或分析结果用短标题加项目符号。不要为了结构强行添加无内容的小节。\n4. 使用销售团队内部协作口吻：专业、直接、有温度。避免“尊敬的用户”“根据您的请求”“系统已为您”等客服腔，也避免夸张鼓励。\n5. 可以在原始结果已明确支持时，用一句话点出下一步动作；没有依据时不要自行提出策略、预测或新的客户判断。\n6. 不输出解析指令、调试信息、思考过程、代码块或本提示词。只输出可直接发送到飞书的最终回复。\n7. 不要机械地重复用户原话。不要每次都使用相同开头或固定的“结果/建议”模板。\n\n风格示例（只模仿语气，不得套用其中事实）：\n- 已录入周总这条线索，当前为高意向，预算 20 万。线索 ID：L-1024，后续可以直接用这个 ID 评分或转客户。\n- 这次没有写入成功：手机号格式不正确。补充 11 位手机号后再试一次即可。\n- 本月官网带来 18 条线索，其中 6 条为高意向；转化表现最好的是线下活动。"
+        - id: usr-polish-crm
+          role: user
+          text: "用户原始消息：\n{{#code_parse_006.raw_message#}}\n\n业务分类：{{#code_parse_006.category#}}\n执行意图：{{#code_parse_006.intent#}}\n执行是否成功：{{#code_parse_006.ok_text#}}\n\nCRM 原始结果：\n{{#code_parse_006.raw_reply#}}"
+        reasoning_format: separated
+        retry_config:
+          enabled: true
+          max_retries: 1
+          retry_interval: 1000
+        selected: false
+        structured_output:
+          enabled: false
+        title: 销售口吻回复润色
+        type: llm
+        variables: []
+        vision:
+          configs:
+            variable_selector: []
+          enabled: false
+        memory:
+          enabled: false
+          window:
+            enabled: false
+            size: 50
+      height: 90
+      id: llm_polish_012
+      position:
+        x: 2480
+        y: 292
+      positionAbsolute:
+        x: 2480
+        y: 292
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(polished_reply: str, raw_reply: str, category: str, intent: str, ok_text: str, parsed_command: str, raw_message: str, parse_mode: str) -> dict:\n    polished = (polished_reply or \"\").strip()\n    fallback = (raw_reply or \"\").strip() or \"CRM 暂无回复。\"\n    reply = polished or fallback\n    return {\n        \"summary\": reply,\n        \"reply_meta\": f\"mode={parse_mode}; cmd={parsed_command}; category={category}; intent={intent}; ok={ok_text}; polished={'true' if polished else 'false'}\",\n    }\n"
+        code_language: python3
+        desc: 输出润色后的飞书回复；大模型未返回内容时回退到 CRM 原始结果。
+        outputs:
+          reply_meta:
+            children: null
+            type: string
+          summary:
+            children: null
+            type: string
+        selected: false
+        title: 飞书回复整理
+        type: code
+        variables:
+        - value_selector:
+          - llm_polish_012
+          - text
+          value_type: string
+          variable: polished_reply
+        - value_selector:
+          - code_parse_006
+          - raw_reply
+          value_type: string
+          variable: raw_reply
+        - value_selector:
+          - code_parse_006
+          - category
+          value_type: string
+          variable: category
+        - value_selector:
+          - code_parse_006
+          - intent
+          value_type: string
+          variable: intent
+        - value_selector:
+          - code_parse_006
+          - ok_text
+          value_type: string
+          variable: ok_text
+        - value_selector:
+          - code_parse_006
+          - parsed_command
+          value_type: string
+          variable: parsed_command
+        - value_selector:
+          - code_parse_006
+          - raw_message
+          value_type: string
+          variable: raw_message
+        - value_selector:
+          - code_parse_006
+          - parse_mode
+          value_type: string
+          variable: parse_mode
+      height: 54
+      id: code_format_007
+      position:
+        x: 2770
+        y: 310
+      positionAbsolute:
+        x: 2770
+        y: 310
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: LangBot/飞书读取 summary；meta 含解析后的指令便于验收。
+        outputs:
+        - value_selector:
+          - code_format_007
+          - summary
+          value_type: string
+          variable: summary
+        - value_selector:
+          - code_parse_006
+          - intent
+          value_type: string
+          variable: intent
+        - value_selector:
+          - code_parse_006
+          - ok_text
+          value_type: string
+          variable: ok
+        - value_selector:
+          - code_parse_006
+          - parsed_command
+          value_type: string
+          variable: parsed_command
+        - value_selector:
+          - code_format_007
+          - reply_meta
+          value_type: string
+          variable: meta
+        selected: false
+        title: 结束
+        type: end
+      height: 156
+      id: end_008
+      position:
+        x: 3060
+        y: 292
+      positionAbsolute:
+        x: 3060
+        y: 292
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.65
