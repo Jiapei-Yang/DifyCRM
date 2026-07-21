@@ -1,58 +1,105 @@
 # DifyCRM
 
-面向飞书 + LangBot + Dify 的智能 CRM 业务系统。重点：获客营销闭环（渠道、活动、线索、评分、转客户、跟进、分析）。
+**Feishu-native AI CRM Agent** — talk to your pipeline in natural language; structured business data stays in MySQL, knowledge stays in RAG, every write goes through **function calling**.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Stack](https://img.shields.io/badge/Stack-Feishu%20%7C%20LangBot%20%7C%20Dify%20%7C%20FastAPI%20%7C%20MySQL-informational.svg)](#architecture)
+
+Product case page: [www.yangjiapei.com/cases/difycrm](https://www.yangjiapei.com/cases/difycrm/)
 
 ---
 
-## 先读：Clone 不能开箱即用
+## Why DifyCRM
 
-本仓库提供的是 **CRM 业务 API + SQL + Dify 工作流 DSL + 文档**。
+Sales teams already live in chat. They should not open another heavy CRM just to ask:
 
-完整「飞书里说人话用 CRM」还需要你**自行准备**：
+- “What’s going on with this lead?”
+- “Who should I follow up this week?”
+- “How is the funnel looking?”
 
-| 组件 | 是否在本仓 | 说明 |
-|------|------------|------|
-| FastAPI + MySQL 脚本 | 是 | 本机可起 API |
-| Dify（含 LLM 配置） | **否** | 需本地/自托管 Dify；并**手动导入** `dify/crm-main.yml` |
-| LangBot + 飞书机器人 | **否** | 通常在独立基础设施部署中配置 |
-| RAG 知识库接入主流程 | 规划能力 | 结构化数据始终以 MySQL 为准 |
-
-导入 DSL 后，还需在 Dify 中配置「自然语言转指令」等节点所用的模型。
+DifyCRM turns Feishu messages into a **tool-using Agent**: intent → plan → route → call domain tools → compose a reply. It is not a free-form chatbot that invents pipeline numbers.
 
 ---
 
-## 设计结论
+## Agent capabilities
 
-- 关键业务数据落 MySQL（默认库名 `dify_crm`）。
-- 飞书：聊天入口；Dify：NLU / 编排；**CRM API：业务核心**（避免多套真源）。
-- RAG 只适合话术/FAQ 等非结构化资料；客户、线索、金额、状态等精确数据只查 MySQL。
+| Capability | What it does |
+|------------|----------------|
+| **NLU / Intent** | Parse natural language (or `/slash` commands) into CRM intents and slots |
+| **Planner** | Single-step or multi-step tool plans for read / write / analysis |
+| **Router** | Split traffic: RAG for soft knowledge, MySQL for profiles & money states |
+| **Function calling** | Bound tools such as `create_lead`, `score_lead`, `convert_lead`, `dashboard`… |
+| **Domain API** | Validation, ownership, and durable writes in one place |
+| **RAG / Memory** | Playbooks, FAQ, cases, policies as non-structured context |
+| **Response composer** | Merge structured results + retrieved snippets into Feishu-ready replies |
 
-## 项目结构
+Covered CRM surface today: channels, campaigns, leads (create / list / score / convert), customers, follow-ups, source & acquisition analytics, funnel, personal dashboard.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph entry [Entry]
+    Feishu[Feishu Chat]
+    LangBot[LangBot Gateway]
+  end
+
+  subgraph runtime [Agent Runtime on Dify]
+    NLU[LLM Intent and Slot Filling]
+    Planner[Task Planner]
+    Router[Tool Router]
+  end
+
+  subgraph tools [Tools and Memory]
+    FC[Function Calling Tools]
+    RAG[RAG Memory]
+    API[CRM Domain API]
+    DB[(MySQL Profiles and Pipeline)]
+  end
+
+  subgraph out [Reply]
+    Composer[Response Composer]
+  end
+
+  Feishu --> LangBot --> NLU --> Planner --> Router
+  Router -->|knowledge / playbooks| RAG
+  Router -->|read write CRM| FC --> API --> DB
+  RAG --> Composer
+  API --> Composer
+  Composer --> Feishu
+```
+
+**Data rule of thumb**
+
+- Profiles, amounts, stages, owners → **MySQL** via Domain API  
+- Playbooks, FAQ, narratives → **RAG**  
+- Mutating actions → **function calling only** (no silent LLM side effects)
+
+---
+
+## Repository layout
 
 ```text
 DifyCRM/
-  src/        FastAPI 业务服务
-  sql/        建表与演示数据
-  scripts/    初始化与启动脚本
-  dify/       工作流 DSL 与集成说明
-  docs/       入门地图、DEMO、PRD
+├── src/          # FastAPI domain service + command router
+├── sql/          # schema + demo seed
+├── scripts/      # init DB / start API / smoke test
+├── dify/         # workflow DSL (crm-main.yml) + OpenAPI notes
+├── docs/         # product map, DEMO script, PRD
+├── .env.example
+└── requirements.txt
 ```
 
-## 文档
+---
 
-- [docs/CRM-入门与指令地图.md](docs/CRM-入门与指令地图.md) — 功能与指令
-- [docs/DEMO.md](docs/DEMO.md) — 演示节奏
-- [dify/README-DIFY-INTEGRATION.md](dify/README-DIFY-INTEGRATION.md) — Dify / LangBot 集成
+## Quick start (API only)
 
-## 最小可运行路径（仅 API）
-
-### 1. 环境
-
-- Python 3.10+
-- 本机 MySQL（可用 `.env.example` 中的演示账号，按你环境修改）
+**Requires:** Python 3.10+, local MySQL.
 
 ```powershell
-cd DifyCRM
 copy .env.example .env
 python -m venv .venv
 .\.venv\Scripts\activate
@@ -61,49 +108,66 @@ pip install -r requirements.txt
 .\scripts\start_api.ps1
 ```
 
-### 2. 验证
+Health check:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:5055/health
 ```
 
-统一入口：
+Unified Agent / tool entry:
 
 ```http
 POST http://127.0.0.1:5055/assistant/command
 Content-Type: application/json
 
 {
-  "message": "/线索列表",
+  "message": "列出当前线索",
   "sender_id": "demo_sales"
 }
 ```
 
-Dify 若跑在 Docker 且需访问宿主机 API，使用：
+From Dify inside Docker to the host API, use `http://host.docker.internal:5055`.
 
-```text
-http://host.docker.internal:5055
-```
+---
 
-### 3. 接入 Dify（完整体验）
+## Full Feishu experience
 
-1. 在 Dify 中**导入**本仓 `dify/crm-main.yml`（应用名建议 `crm_main`，结束节点字段 `summary`）。
-2. 配置工作流中的 LLM 节点模型。
-3. 将 HTTP 节点指向上述 API 的 `/assistant/command`。
-4. LangBot 流水线指向该 Dify Workflow（Base URL 按你的 Dify 部署填写）。
+This repo ships the **domain brain** (API + SQL + DSL). Runtime pieces live outside:
 
-详见 [dify/README-DIFY-INTEGRATION.md](dify/README-DIFY-INTEGRATION.md)。
+1. Import [`dify/crm-main.yml`](dify/crm-main.yml) into your Dify instance (`crm_main`, end field `summary`).
+2. Configure the LLM node (e.g. DeepSeek / other provider in your Dify console).
+3. Point the HTTP / tool node at `/assistant/command`.
+4. Wire LangBot → that Dify app → Feishu bot.
 
-## 配置（`.env.example`）
+Details: [dify/README-DIFY-INTEGRATION.md](dify/README-DIFY-INTEGRATION.md) · [docs/DEMO.md](docs/DEMO.md) · [docs/CRM-入门与指令地图.md](docs/CRM-入门与指令地图.md)
 
-| 变量 | 含义 |
-|------|------|
-| `APP_HOST` / `APP_PORT` | API 监听 |
-| `MYSQL_*` | 数据库连接 |
-| `PUBLIC_API_BASE` | 容器内访问宿主机时的基址提示 |
+---
 
-**不要**把真实 `.env` 或云厂商 API Key 提交进 Git。
+## Example function calling tools
+
+| Tool | Purpose |
+|------|---------|
+| `create_channel` / `create_campaign` | Acquisition setup |
+| `create_lead` / `list_leads` / `score_lead` / `convert_lead` | Lead lifecycle |
+| `create_customer` / `list_customers` | Accounts |
+| `add_followup` | Activity + summary |
+| `source_stats` / `acquisition_stats` / `funnel_stats` / `dashboard` | Analytics |
+| `help` | Capability menu |
+
+---
+
+## Configuration
+
+Copy `.env.example` → `.env`. Do **not** commit real `.env` or cloud API keys.
+
+| Variable | Role |
+|----------|------|
+| `APP_HOST` / `APP_PORT` | API bind |
+| `MYSQL_*` | Database |
+| `PUBLIC_API_BASE` | Hint for container → host access |
+
+---
 
 ## License
 
-MIT — 见 [LICENSE](LICENSE)。
+[MIT](LICENSE)
